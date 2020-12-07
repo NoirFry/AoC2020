@@ -51,17 +51,9 @@ namespace Day07
                 } while (offset < str.Length);
             }
 
-            int sum = 0;
+            int sum = rootBags.Where(bag => bag.Contains(shinygold)).Count() - 1;
 
-            foreach (Bag? bag in rootBags)
-            {
-                if (bag.Contains(shinygold))
-                {
-                    sum++;
-                }
-            }
-
-            Console.WriteLine($"Part1: total shiny gold bags: {sum - 1}");
+            Console.WriteLine($"Part1: total shiny gold bags: {sum}");
 
             Bag shinyBag = rootBags.First(x => x.Name == shinygold);
 
@@ -89,27 +81,12 @@ namespace Day07
 
         public bool Contains(string name)
         {
-            if (Name == name)
-            {
-                return true;
-            }
-
-            return inside.Any(kvp => kvp.Key.Contains(name));
+            return Name == name || inside.Any(kvp => kvp.Key.Contains(name));
         }
 
         public int TotalBagsInside()
         {
-            if (inside.Count == 0)
-                return 0;
-
-            int sum = 0;
-
-            foreach (KeyValuePair<Bag, int> kvp in inside)
-            {
-                sum += kvp.Value * (kvp.Key.TotalBagsInside() + 1);
-            }
-
-            return sum;
+            return inside.Sum(kvp => kvp.Value * (kvp.Key.TotalBagsInside() + 1));
         }
 
         public override string ToString() => Name;
