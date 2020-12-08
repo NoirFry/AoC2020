@@ -19,6 +19,8 @@
 
         private int CurentArg => args[position];
 
+        private bool HasFinished => position >= program.Count;
+
         public HgcEmulator(List<HgcOpCodes> program, List<int> args)
         {
             this.program.AddRange(program);
@@ -49,12 +51,30 @@
             return endOfProgram;
         }
 
+        public void InstructionToggleNopJmp(int position)
+        {
+            if (InstructionAt(position) == HgcOpCodes.nop)
+                ReplaceInstructionAt(HgcOpCodes.jmp, position);
+            else if (InstructionAt(position) == HgcOpCodes.jmp)
+                ReplaceInstructionAt(HgcOpCodes.nop, position);
+        }
+
+        public void Reset()
+        {
+            position = 0;
+            accumulator = 0;
+            visitedPositions.Clear();
+        }
+
         /// <summary>
         /// Executes one stop of the program.
         /// </summary>
         /// <returns><see langword="true"/> if execution has reached the end of the program, otherwise <see langword="false"/>.</returns>
-        public bool Execute()
+        private bool Execute()
         {
+            if (HasFinished)
+                return true;
+
             switch (CurentInstruction)
             {
                 case HgcOpCodes.nop:
@@ -75,15 +95,7 @@
             return position == program.Count;
         }
 
-        public void InstructionToggleNopJmp(int position)
-        {
-            if (InstructionAt(position) == HgcOpCodes.nop)
-                ReplaceInstructionAt(HgcOpCodes.jmp, position);
-            else if (InstructionAt(position) == HgcOpCodes.jmp)
-                ReplaceInstructionAt(HgcOpCodes.nop, position);
-        }
-
-        public HgcOpCodes InstructionAt(int position)
+        private HgcOpCodes InstructionAt(int position)
         {
             if (position < 0 || position >= program.Count)
                 throw new ArgumentOutOfRangeException(nameof(position), "Out of range");
@@ -91,7 +103,7 @@
             return program[position];
         }
 
-        public void ReplaceInstructionAt(HgcOpCodes instruction, int position)
+        private void ReplaceInstructionAt(HgcOpCodes instruction, int position)
         {
             if (instruction == HgcOpCodes.None)
                 throw new ArgumentException("Wrong OpCode", nameof(instruction));
@@ -100,13 +112,6 @@
                 throw new ArgumentOutOfRangeException(nameof(position), "Out of range");
 
             program[position] = instruction;
-        }
-
-        public void Reset()
-        {
-            position = 0;
-            accumulator = 0;
-            visitedPositions.Clear();
         }
 
         private void JumpTo(int jump)
