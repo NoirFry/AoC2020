@@ -1,6 +1,6 @@
 ﻿namespace HgcEmulator
 {
-    public enum HgcOpCodes
+    public enum HgcOpCode
     {
         None,
         nop,

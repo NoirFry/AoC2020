@@ -13,39 +13,34 @@
             string InputFileName = @"..\..\..\Input.txt";
             string[] inputLines = File.ReadAllLines(InputFileName);
 
-            List<HgcOpCodes> program = new();
+            List<HgcOpCode> program = new();
             List<int> args = new();
 
             foreach (string line in inputLines)
             {
                 string[] blocks = line.Split(' ', StringSplitOptions.None);
-                program.Add(Enum.Parse<HgcOpCodes>(blocks[0]));
+                program.Add(Enum.Parse<HgcOpCode>(blocks[0]));
                 args.Add(Convert.ToInt32(blocks[1], CultureInfo.InvariantCulture));
             }
 
             HgcEmulator emulator = new HgcEmulator(program, args);
 
-            if (!emulator.Run(out int part1Acc))
-            {
-                Console.WriteLine($"Part1: accumulator: {part1Acc}, (right answer: 1384)");
-            }
+            emulator.Run();
+
+            Console.WriteLine($"Part1: accumulator: {emulator.Accumulator}, (right answer: 1384)");
 
             for (int i = 0; i < program.Count; i++)
             {
-                emulator.Reset();
-
                 emulator.InstructionToggleNopJmp(i);
 
-                bool exited = emulator.Run(out int acc);
-                if (!exited)
+                ReturnStatus status = emulator.Run();
+                if (status == ReturnStatus.Finished)
                 {
-                    emulator.InstructionToggleNopJmp(i);
-                }
-                else
-                {
-                    Console.WriteLine($"Part2: accumulator: {acc}, (right answer: 761)");
+                    Console.WriteLine($"Part2: accumulator: {emulator.Accumulator}, (right answer: 761)");
                     break;
                 }
+
+                emulator.InstructionToggleNopJmp(i);
             }
 
             Console.ReadKey();

@@ -5,120 +5,113 @@
 
     public class HgcEmulator
     {
-        private readonly List<HgcOpCodes> program = new();
+        private readonly List<HgcOpCode> _program = new();
 
-        private readonly List<int> args = new();
+        private readonly List<int> _args = new();
 
-        private readonly HashSet<int> visitedPositions = new();
+        private readonly HashSet<int> _visitedPositions = new();
 
-        private int position;
+        private int _position;
 
-        private int accumulator;
+        private int _accumulator;
 
-        private HgcOpCodes CurentInstruction => program[position];
+        public int Accumulator => _accumulator;
 
-        private int CurentArg => args[position];
+        public int Position => _position;
 
-        private bool HasFinished => position >= program.Count;
+        private HgcOpCode CurentInstruction => _program[_position];
 
-        public HgcEmulator(List<HgcOpCodes> program, List<int> args)
+        private int CurentArg => _args[_position];
+
+        private bool HasFinished => _position >= _program.Count || _position < 0;
+
+        public HgcEmulator(List<HgcOpCode> program, List<int> args)
         {
-            this.program.AddRange(program);
-            this.args.AddRange(args);
+            _program.AddRange(program);
+            _args.AddRange(args);
         }
 
         /// <summary>
-        /// Run emulator until its looped or exited the program.
+        /// Run emulator with specific starting parameters until its looped or finished the program.
         /// </summary>
-        /// <param name="acc">Accumulator value before the last instruction.</param>
-        /// <returns><see langword="true"/> if exited the program, otherwise <see langword="false"/>.</returns>
-        public bool Run(out int acc)
+        /// <returns><see cref="ReturnStatus.Finished"/><br/>
+        /// <see cref="ReturnStatus.Looped"/></returns>
+        public ReturnStatus RunAt(int position, int accumulator, bool clearVisited)
         {
-            visitedPositions.Add(position);
-
-            bool visited;
-            bool endOfProgram;
-            int oldAcc;
+            _position = position;
+            _accumulator = accumulator;
+            if (clearVisited)
+                _visitedPositions.Clear();
 
             do
             {
-                oldAcc = accumulator;
-                endOfProgram = Execute();
-                visited = !visitedPositions.Add(position);
-            } while (!visited && !endOfProgram);
+                if (!_visitedPositions.Add(Position))
+                    return ReturnStatus.Looped;
+            } while (Execute() == ReturnStatus.Success);
 
-            acc = oldAcc;
-            return endOfProgram;
+            return ReturnStatus.Finished;
+        }
+
+        /// <summary>
+        /// Reset and run emulator until its looped or finished the program.
+        /// </summary>
+        /// <returns><see cref="ReturnStatus.Finished"/><br/>
+        /// <see cref="ReturnStatus.Looped"/></returns>
+        public ReturnStatus Run()
+        {
+            return RunAt(0, 0, true);
         }
 
         public void InstructionToggleNopJmp(int position)
         {
-            if (InstructionAt(position) == HgcOpCodes.nop)
-                ReplaceInstructionAt(HgcOpCodes.jmp, position);
-            else if (InstructionAt(position) == HgcOpCodes.jmp)
-                ReplaceInstructionAt(HgcOpCodes.nop, position);
-        }
-
-        public void Reset()
-        {
-            position = 0;
-            accumulator = 0;
-            visitedPositions.Clear();
+            if (InstructionAt(position) == HgcOpCode.nop)
+                ReplaceInstructionAt(HgcOpCode.jmp, position);
+            else if (InstructionAt(position) == HgcOpCode.jmp)
+                ReplaceInstructionAt(HgcOpCode.nop, position);
         }
 
         /// <summary>
         /// Executes one stop of the program.
         /// </summary>
-        /// <returns><see langword="true"/> if execution has reached the end of the program, otherwise <see langword="false"/>.</returns>
-        private bool Execute()
+        /// <returns><see cref="ReturnStatus.Finished"/><br/>
+        /// <see cref="ReturnStatus.Success"/></returns>
+        /// <exception cref="ArgumentException"></exception>
+        private ReturnStatus Execute()
         {
             if (HasFinished)
-                return true;
+                return ReturnStatus.Finished;
 
             switch (CurentInstruction)
             {
-                case HgcOpCodes.nop:
-                    JumpTo(1);
+                case HgcOpCode.nop:
+                    _position += 1;
                     break;
-                case HgcOpCodes.acc:
-                    accumulator += CurentArg;
-                    JumpTo(1);
+                case HgcOpCode.acc:
+                    _accumulator += CurentArg;
+                    _position += 1;
                     break;
-                case HgcOpCodes.jmp:
-                    JumpTo(CurentArg);
+                case HgcOpCode.jmp:
+                    _position += CurentArg;
                     break;
-                case HgcOpCodes.None:
+                case HgcOpCode.None:
                 default:
                     throw new ArgumentException("Wrong OpCode", nameof(CurentInstruction));
             }
 
-            return position == program.Count;
+            return ReturnStatus.Success;
         }
 
-        private HgcOpCodes InstructionAt(int position)
-        {
-            if (position < 0 || position >= program.Count)
-                throw new ArgumentOutOfRangeException(nameof(position), "Out of range");
+        private HgcOpCode InstructionAt(int position) => _program[position];
 
-            return program[position];
-        }
-
-        private void ReplaceInstructionAt(HgcOpCodes instruction, int position)
+        private void ReplaceInstructionAt(HgcOpCode instruction, int position)
         {
-            if (instruction == HgcOpCodes.None)
+            if (instruction == HgcOpCode.None)
                 throw new ArgumentException("Wrong OpCode", nameof(instruction));
 
-            if (position < 0 || position >= program.Count)
+            if (position < 0 || position >= _program.Count)
                 throw new ArgumentOutOfRangeException(nameof(position), "Out of range");
 
-            program[position] = instruction;
-        }
-
-        private void JumpTo(int jump)
-        {
-            if (position + jump < 0)
-                throw new ArgumentOutOfRangeException(nameof(jump), "Out of range");
-            position += jump;
+            _program[position] = instruction;
         }
     }
 }
